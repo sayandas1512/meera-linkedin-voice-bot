@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/telegram-webhook.ts": {
+      "includeFiles": "meera-voice-skill.txt"
+    }
+  }
+}
