@@ -37,10 +37,18 @@ interface TelegramVoice {
   file_id: string;
 }
 
+interface TelegramUser {
+  is_bot: boolean;
+}
+
 interface TelegramMessage {
   text?: string;
   voice?: TelegramVoice;
   chat: TelegramChat;
+  reply_to_message?: {
+    from?: TelegramUser;
+    text?: string;
+  };
 }
 
 interface TelegramUpdate {
@@ -231,6 +239,48 @@ Write the full post, 250-400 words.`;
   return text.trim();
 }
 
+function isDraftReply(repliedText: string): boolean {
+  return /^\[.+?\]/.test(repliedText);
+}
+
+function extractCategoryTag(repliedText: string): string | null {
+  const match = repliedText.match(/^\[(.+?)\]/);
+  return match ? match[1] : null;
+}
+
+function stripDraftPrefix(repliedText: string): string {
+  return repliedText.replace(/^\[.+?\](?: · [^\n]*)?\n\n?/, '');
+}
+
+async function revisePost(previousDraft: string, feedback: string, voiceSkillText: string): Promise<string> {
+  const ai = getGeminiClient();
+
+  const prompt = `You previously drafted this LinkedIn post in Meera Pillai's voice for Skinstinct:
+"""
+${previousDraft}
+"""
+
+Meera has feedback on this draft: '${feedback}'
+
+Revise the post to address her feedback. Keep following the voice reference as your style guide:
+"""
+${voiceSkillText}
+"""
+
+Keep the same LinkedIn structural template (cold open, misconception, decomposition, Skinstinct data point, reader instruction) and all the original constraints (one moment where she narrows her own claim, no hype adjectives or exclamation points, evidence reads as hers not borrowed authority, never pitches directly — ends on a reader action, not a CTA to buy).
+
+Write the full revised post, 250-400 words.`;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-3.5-flash',
+    contents: prompt,
+  });
+
+  const text = response.text;
+  if (!text) throw new Error('Empty revision response from Gemini');
+  return text.trim();
+}
+
 async function sendTelegramMessage(chatId: number, text: string): Promise<void> {
   const token = getTelegramToken();
 
@@ -265,6 +315,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const noteText = msg.text ?? (await transcribeVoice(msg.voice!.file_id));
+
+    const repliedText = msg.reply_to_message?.from?.is_bot ? msg.reply_to_message.text : undefined;
+
+    if (repliedText && isDraftReply(repliedText)) {
+      const category = extractCategoryTag(repliedText) ?? 'Revision';
+      const previousDraft = stripDraftPrefix(repliedText);
+      const voiceSkillText = getVoiceSkillText();
+      const revisedDraft = await revisePost(previousDraft, noteText, voiceSkillText);
+
+      await sendTelegramMessage(chatId, `[${category}] · Revised\n\n${revisedDraft}`);
+      res.status(200).json({ ok: true, revised: true });
+      return;
+    }
 
     const scoreResult = await checkScore(noteText);
 
