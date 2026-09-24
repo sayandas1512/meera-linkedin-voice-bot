@@ -305,6 +305,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const update = req.body as TelegramUpdate;
   const msg = update?.message ?? update?.channel_post;
 
+  console.log('DEBUG incoming update:', JSON.stringify(update));
+
   if (!msg || (!msg.text && !msg.voice) || !msg.chat?.id) {
     // Nothing to act on (edited_message, my_chat_member, etc.) — ack and stop.
     res.status(200).json({ ok: true, skipped: true });
