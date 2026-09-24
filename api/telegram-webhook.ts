@@ -37,16 +37,11 @@ interface TelegramVoice {
   file_id: string;
 }
 
-interface TelegramUser {
-  is_bot: boolean;
-}
-
 interface TelegramMessage {
   text?: string;
   voice?: TelegramVoice;
   chat: TelegramChat;
   reply_to_message?: {
-    from?: TelegramUser;
     text?: string;
   };
 }
@@ -305,8 +300,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const update = req.body as TelegramUpdate;
   const msg = update?.message ?? update?.channel_post;
 
-  console.log('DEBUG incoming update:', JSON.stringify(update));
-
   if (!msg || (!msg.text && !msg.voice) || !msg.chat?.id) {
     // Nothing to act on (edited_message, my_chat_member, etc.) — ack and stop.
     res.status(200).json({ ok: true, skipped: true });
@@ -318,7 +311,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const noteText = msg.text ?? (await transcribeVoice(msg.voice!.file_id));
 
-    const repliedText = msg.reply_to_message?.from?.is_bot ? msg.reply_to_message.text : undefined;
+    const repliedText = msg.reply_to_message?.text;
 
     if (repliedText && isDraftReply(repliedText)) {
       const category = extractCategoryTag(repliedText) ?? 'Revision';
