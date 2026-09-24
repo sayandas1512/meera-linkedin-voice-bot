@@ -279,7 +279,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const voiceSkillText = getVoiceSkillText();
     const draft = await draftPost(noteText, scoreResult.category, newsItems, voiceSkillText);
 
-    await sendTelegramMessage(chatId, `[${scoreResult.category}]\n\n${draft}`);
+    await sendTelegramMessage(chatId, `[${scoreResult.category}] · Scored ${scoreResult.score}/10\n\n${draft}`);
     res.status(200).json({ ok: true, score: scoreResult.score });
   } catch (err) {
     console.error('telegram-webhook error:', err);
