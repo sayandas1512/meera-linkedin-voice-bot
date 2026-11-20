@@ -1,5 +1,5 @@
 MEERA PILLAI / SKINSTINCT — VOICE ANALYSIS
-Built from: 4 LinkedIn posts + 11 email newsletters (MESA Case 1 seed corpus)
+Built from: 4 LinkedIn posts + 11 email newsletters
 Purpose: a working reference for drafting new content that sounds like Meera actually wrote it.
 
 ================================================================
